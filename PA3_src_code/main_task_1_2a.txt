@@ -1,0 +1,374 @@
+clc;
+clearvars;
+mydir = 'C:\Users\Arti\Downloads\linearly_separable\';
+fileID = fopen(strcat(mydir,'class1_train.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x1 = A(1:2:end);
+y_class1 = A(2:2:end);
+wphi = ones(length(x1),1);
+train1_data = [x1 y_class1];
+
+fileID = fopen(strcat(mydir,'class2_train.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x2 = A(1:2:end);
+y2 = A(2:2:end);
+train2_data = [x2 y2];
+
+fileID = fopen(strcat(mydir,'class3_train.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x3 = A(1:2:end);
+y3 = A(2:2:end);
+train3_data = [x3 y3];
+
+total_data = [train1_data ; train2_data ; train3_data];
+
+%%%%%%%%%%
+k = 3;
+%%%%%%%%%%
+%%%%%%%%%%
+s  = 5;
+%%%%%%%%%%
+
+[idx , mu] = kmeans(total_data , k) ;
+
+identity = zeros(k,k);
+
+for iteratio = 1: k
+   identity(iteratio,iteratio) = 1; 
+end
+
+cov = inv((1/25)*(identity)); %%%%%%%%%%%%%% check this
+
+w = rand(k,3,1);
+sizeforw = size(w);
+wphi = ones(750,k);
+
+for c = 1:k
+    for r = 1:750
+      sm = norm(total_data(r,:)' - mu(c,:)');
+      power = sm/(2*s^2);
+      wphi(r,c) = exp(-power);
+    end
+end
+
+%a= wphi*w ;
+eta  = 0.00001;
+
+for iteration = 1:800
+    a= wphi*w ;
+    
+    y = zeros(750,3);
+     
+     for n = 1:750
+        sum = exp(a(n,1))+exp(a(n,2))+exp(a(n,3));
+        y(n,1) = exp(a(n,1))/sum;
+        y(n,2) = exp(a(n,2))/sum;
+        y(n,3) = exp(a(n,3))/sum;
+     end
+    sum1 = zeros(sizeforw(1),1);
+    sum2 = zeros(sizeforw(1),1);
+    sum3 = zeros(sizeforw(1),1);
+    
+      for i = 1:250
+        sum1 = sum1 + (y(i,1)-1)*(wphi(i,:)');
+        sum1 = sum1 + y(250+i,1)*(wphi(250+i,:)');
+        sum1 = sum1 + y(500+i,1)*(wphi(500+i,:)');
+   
+        sum2 = sum2 + y(i,2)*(wphi(i,:)');
+        sum2 = sum2 + (y(250+i,2)-1)*(wphi(250+i,:)');
+        sum2 = sum2 + y(500+i,2)*(wphi(500+i,:)');
+      
+        sum3 = sum3 + y(i,3)*(wphi(i,:)');
+        sum3 = sum3 + y(250+i,3)*(wphi(250+i,:)');
+        sum3 = sum3 + (y(500+i,3)-1)*(wphi(500+i,:)');
+      end
+      
+      for j = 1 : sizeforw(1,1) %%%%%%%%%% 
+            w(j,1) = w(j,1) - eta*sum1(j,1);
+            w(j,2) = w(j,2) - eta*sum2(j,1);
+            w(j,3) = w(j,3) - eta*sum3(j,1);
+            
+      norm(w(j,1));
+      end
+end
+
+confusion_mat_train = zeros(3,3);
+for i = 1:750
+    if i<=250
+    label_count = max(max(y(i,1),y(i,2)),y(i,3));
+        if label_count == y(i,1)
+           confusion_mat_train(1,1) = confusion_mat_train(1,1)+1;
+        elseif label_count == y(i,2)
+           confusion_mat_train(1,2) = confusion_mat_train(1,2)+1;
+        elseif label_count == y(i,3)
+            confusion_mat_train(1,3) = confusion_mat_train(1,3)+1;
+        end
+    end
+    if i>=251 && i<=500
+    label_count = max(max(y(i,1),y(i,2)),y(i,3));
+        if label_count == y(i,2)
+           confusion_mat_train(2,2) = confusion_mat_train(2,2)+1;
+        elseif label_count == y(i,1)
+           confusion_mat_train(2,1) = confusion_mat_train(2,1)+1;
+        elseif label_count == y(i,3)
+            confusion_mat_train(2,3) = confusion_mat_train(2,3)+1;
+        end
+    end
+    if i>=501 && i<=750
+        label_count = max(max(y(i,1),y(i,2)),y(i,3));
+        if label_count == y(i,3)
+           confusion_mat_train(3,3) = confusion_mat_train(3,3)+1;
+        elseif label_count == y(i,2)
+           confusion_mat_train(3,2) = confusion_mat_train(3,2)+1;
+        elseif label_count == y(i,1)
+            confusion_mat_train(3,1) = confusion_mat_train(3,1)+1;
+        end
+    end
+end
+
+accurately_classified = confusion_mat_train(1,1)+confusion_mat_train(2,2)+confusion_mat_train(3,3);
+accuracy_total = 750;
+accuracy_train = (accurately_classified/accuracy_total)*100;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% validation
+
+fileID = fopen(strcat(mydir,'class1_val.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x1 = A(1:2:end);
+y_class1 = A(2:2:end);
+w_val_phi = ones(length(x1),1);
+val1_data = [x1 y_class1];
+
+fileID = fopen(strcat(mydir,'class2_val.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x2 = A(1:2:end);
+y2 = A(2:2:end);
+val2_data = [x2 y2];
+
+fileID = fopen(strcat(mydir,'class3_val.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x3 = A(1:2:end);
+y3 = A(2:2:end);
+val3_data = [x3 y3];
+
+total_val_data = [val1_data ; val2_data ; val3_data];
+
+sizeforw_val = size(w);
+w_val_phi = ones(450,k);
+
+for c = 1:k
+    for r = 1:450
+      sm = norm(total_val_data(r,:)' - mu(c,:)');
+      power = sm/(2*s^2);
+      w_val_phi(r,c) = exp(-power);
+    end
+end
+
+a_val = w_val_phi * w;
+
+y_val = zeros(450,3);
+     
+     for n = 1:450
+        sum = exp(a_val(n,1))+exp(a_val(n,2))+exp(a_val(n,3));
+        y_val(n,1) = exp(a_val(n,1))/sum;
+        y_val(n,2) = exp(a_val(n,2))/sum;
+        y_val(n,3) = exp(a_val(n,3))/sum;
+     end
+confusion_mat_val = zeros(3,3);
+for i = 1:450
+    if i>=1 && i<=150
+    label_count = max(max(y_val(i,1),y_val(i,2)),y_val(i,3));
+        if label_count == y_val(i,1)
+           confusion_mat_val(1,1) = confusion_mat_val(1,1)+1;
+        elseif label_count == y_val(i,2)
+           confusion_mat_val(1,2) = confusion_mat_val(1,2)+1;
+        elseif label_count == y_val(i,3)
+            confusion_mat_val(1,3) = confusion_mat_val(1,3)+1;
+        end
+    end
+    if i>=151 && i<=300
+    label_count = max(max(y_val(i,1),y_val(i,2)),y_val(i,3));
+        if label_count == y_val(i,2)
+           confusion_mat_val(2,2) = confusion_mat_val(2,2)+1;
+        elseif label_count == y_val(i,1)
+           confusion_mat_val(2,1) = confusion_mat_val(2,1)+1;
+        elseif label_count == y_val(i,3)
+            confusion_mat_val(2,3) = confusion_mat_val(2,3)+1;
+        end
+    end
+    if i>=301 && i<=450
+        label_count = max(max(y_val(i,1),y_val(i,2)),y_val(i,3));
+        if label_count == y_val(i,3)
+           confusion_mat_val(3,3) = confusion_mat_val(3,3)+1;
+        elseif label_count == y_val(i,2)
+           confusion_mat_val(3,2) = confusion_mat_val(3,2)+1;
+        elseif label_count == y_val(i,1)
+            confusion_mat_val(3,1) = confusion_mat_val(3,1)+1;
+        end
+    end
+end
+
+accurately_classified_val = confusion_mat_val(1,1)+confusion_mat_val(2,2)+confusion_mat_val(3,3);
+accuracy_val_total = 450;
+accuracy_validation = (accurately_classified_val/accuracy_val_total)*100;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% test
+fileID = fopen(strcat(mydir,'class1_test.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x1 = A(1:2:end);
+y_class1 = A(2:2:end);
+w_test_phi = ones(length(x1),1);
+test1_data = [x1 y_class1];
+
+fileID = fopen(strcat(mydir,'class2_test.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x2 = A(1:2:end);
+y2 = A(2:2:end);
+test2_data = [x2 y2];
+
+fileID = fopen(strcat(mydir,'class3_test.txt'),'r');
+A = fscanf(fileID,'%f');
+fclose(fileID);
+x3 = A(1:2:end);
+y3 = A(2:2:end);
+test3_data = [x3 y3];
+
+total_test_data = [test1_data ; test2_data ; test3_data];
+%[idx , mu] = kmeans(total_test_data , k) ;
+
+sizeforw_test = size(w);
+w_test_phi = ones(300,k);
+
+for c = 1:k
+    for r = 1:300
+      sm = norm(total_test_data(r,:)' - mu(c,:)');
+      power = sm/(2*s^2);
+      w_test_phi(r,c) = exp(-power);
+    end
+end
+
+%a= wphi*w ;
+
+    a_test= w_test_phi*w ;
+    
+    y_test = zeros(300,3);
+     
+     for n = 1:300
+        sum = exp(a_test(n,1))+exp(a_test(n,2))+exp(a_test(n,3));
+        y_test(n,1) = exp(a_test(n,1))/sum;
+        y_test(n,2) = exp(a_test(n,2))/sum;
+        y_test(n,3) = exp(a_test(n,3))/sum;
+     end
+ 
+confusion_mat_test = zeros(3,3);
+for i = 1:300
+    if i>=1 && i<=100
+    label_count = max(max(y_test(i,1),y_test(i,2)),y_test(i,3));
+        if label_count == y_test(i,1)
+           confusion_mat_test(1,1) = confusion_mat_test(1,1)+1;
+        elseif label_count == y_test(i,2)
+           confusion_mat_test(1,2) = confusion_mat_test(1,2)+1;
+        elseif label_count == y_test(i,3)
+            confusion_mat_test(1,3) = confusion_mat_test(1,3)+1;
+        end
+    end
+    if i>=101 && i<=200
+    label_count = max(max(y_test(i,1),y_test(i,2)),y_test(i,3));
+        if label_count == y_test(i,2)
+           confusion_mat_test(2,2) = confusion_mat_test(2,2)+1;
+        elseif label_count == y_test(i,1)
+           confusion_mat_test(2,1) = confusion_mat_test(2,1)+1;
+        elseif label_count == y_test(i,3)
+            confusion_mat_test(2,3) = confusion_mat_test(2,3)+1;
+        end
+    end
+    if i>=201 && i<=300
+        label_count = max(max(y_test(i,1),y_test(i,2)),y_test(i,3));
+        if label_count == y_test(i,3)
+           confusion_mat_test(3,3) = confusion_mat_test(3,3)+1;
+        elseif label_count == y_test(i,2)
+           confusion_mat_test(3,2) = confusion_mat_test(3,2)+1;
+        elseif label_count == y_test(i,1)
+            confusion_mat_test(3,1) = confusion_mat_test(3,1)+1;
+        end
+    end
+end
+
+accurately_classified_test = confusion_mat_test(1,1)+confusion_mat_test(2,2)+confusion_mat_test(3,3);
+accuracy_test_total = 300;
+accuracy_test = (accurately_classified_test/accuracy_test_total)*100;
+
+%%%%%%%%%%%%%%%%plot
+
+
+%%%%%%%%%%%%%55555555555555555555
+%{
+xaxis = -10:0.05:20;%0.05
+yaxis = -20:0.05:20;
+[x, y] = meshgrid(xaxis, yaxis);
+plot_data = [x(:) y(:)];
+total_plot_data = size(plot_data,1);
+predicted_plot = zeros(total_plot_data,1);
+
+[idx_plot , mu_plot] = kmeans(plot_data , k , 'MaxIter' , 100000) ;
+
+w_plot_phi = ones(total_plot_data,k); 
+
+
+for c = 1:k
+    for r = 1:total_plot_data
+      c 
+      sm = norm(plot_data(r,:)' - mu(c,:)');
+      power = sm/(2*s^2);
+      w_plot_phi(r,c) = exp(-power);
+    end
+end
+
+a_plot = w_plot_phi * w;
+
+plot_y = zeros(total_plot_data(1,1),k);
+     for n = 1:total_plot_data
+        sum = exp(a_plot(n,1))+exp(a_plot(n,2))+exp(a_plot(n,3));
+        plot_y(n,1) = exp(a_plot(n,1))/sum;
+        plot_y(n,2) = exp(a_plot(n,2))/sum;
+        plot_y(n,3) = exp(a_plot(n,3))/sum;
+     
+        label_count = max(max(plot_y(n,1),plot_y(n,2)),plot_y(n,3));
+        label_count
+        if (plot_y(n,1) == plot_y(n,2) )
+            predicted_plot(n,1) = 1;
+        elseif label_count == plot_y(n,1)
+           predicted_plot(n,1) = 1;
+        elseif label_count == plot_y(n,2)
+            predicted_plot(n,1) = 2;
+        else
+            predicted_plot(n,1) = 3;
+        end
+end
+
+plot = reshape(predicted_plot, size(x));
+imagesc(xaxis,yaxis,plot);
+set(gca,'ydir','normal');
+
+hold on;
+scatter(train1_data(:,1),train1_data(:,2),'m','x');
+scatter(train2_data(:,1),train2_data(:,2),'w','x');
+scatter(train3_data(:,1),train3_data(:,2),'r','x');
+xlabel('x1')
+ylabel('x2')
+str  = { strcat('Decision Region Plot')};
+title(str,'FontSize',15);
+
+%t = text(-5,10,'CLASS 1','Color','r','FontSize',14);
+%t1 = text(5,15,'CLASS 2','Color','g','FontSize',14);
+%t3 = text(5,-15,'CLASS 3','Color','b','FontSize',14);
+hold off;
+%}
